@@ -1,10 +1,13 @@
 """
 Example usage of SEERDataset + SEERSurvivalPrediction.
 
+This script expects a preprocessed file at:
+    <root>/processed/seer_ml_ready.csv
+
 Ablation study:
-1. Train Logistic Regression using all features
+1. Train Logistic Regression using all features.
 2. Train Logistic Regression after removing 'year_dx' if present
-   (otherwise remove the last feature as a fallback)
+   (otherwise remove the last feature as a fallback).
 
 This script demonstrates:
 - dataset loading
@@ -12,7 +15,14 @@ This script demonstrates:
 - simple train/test split
 - baseline model training
 - feature ablation comparison
+
+Example:
+    python examples/seer_survival_prediction_lr.py --root "C:/Users/xieru/Desktop/CS 598 DLH"
 """
+
+from __future__ import annotations
+
+import argparse
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -56,10 +66,22 @@ def evaluate_model(
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Run SEER survival prediction baseline and feature ablation."
+    )
+    parser.add_argument(
+        "--root",
+        type=str,
+        required=True,
+        help="Root directory containing processed/seer_ml_ready.csv",
+    )
+    args = parser.parse_args()
+
     print("Loading dataset...")
+    print(f"Using root: {args.root}")
 
     dataset = SEERDataset(
-        root=r"c:\Users\xieru\Desktop\CS 598 DLH",
+        root=args.root,
         tables=["seer"],
     )
 
