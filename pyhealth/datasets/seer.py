@@ -26,7 +26,7 @@ class SEERDataset(BaseDataset):
         - Official SEER Program: https://seer.cancer.gov/data/access.html
 
     Reference Implementation:
-        - Original Paper GitHub: https://github.com/stefanhgm/MLHC2018-reproducible-survival-seer
+        - GitHub: https://github.com/stefanhgm/MLHC2018-reproducible-survival-seer
 
     Citation:
         Hegselmann S, Greulich L, Varghese J, Dugas M. Reproducible Survival Prediction 
@@ -44,7 +44,8 @@ class SEERDataset(BaseDataset):
         root (str): The root directory where the preprocessed dataset CSV is stored.
         tables (Optional[List[str]]): A list of tables to be included.
         dataset_name (Optional[str]): The name of the dataset. Defaults to "SEER".
-        dev (bool): Whether to enable dev mode (limits to a subset of patients). Defaults to False.
+        dev (bool): Whether to enable dev mode (limits to a subset of patients). 
+            Defaults to False.
         refresh_cache (bool): Whether to refresh the cache. Defaults to False.
         **kwargs: Additional arguments passed to BaseDataset.
 
@@ -52,8 +53,8 @@ class SEERDataset(BaseDataset):
         >>> from pyhealth.datasets import SEERDataset
         >>> # Load SEER dataset using the preprocessed PyHealth-ready table
         >>> dataset = SEERDataset(
-        ...     root="/path/to/seer/processed",
-        ...     tables=["seer_pyhealth"],
+        ...     root="/path/to/processed",
+        ...     tables=["seer"],
         ... )
         >>> dataset.stats()
 
@@ -76,8 +77,7 @@ class SEERDataset(BaseDataset):
             logger.info("No config path provided, using default config")
             config_path = Path(__file__).parent / "configs" / "seer.yaml"
         if tables is None:
-            # This should match the table_name you defined in seer.yaml
-            tables = ["seer_pyhealth"]
+            tables = ["seer"]
         super().__init__(
             root=root,
             tables=tables,
@@ -90,7 +90,8 @@ class SEERDataset(BaseDataset):
     def info() -> None:
         """Prints the expected input format for the SEER dataset."""
         print(
-            "SEERDataset expects a preprocessed PyHealth-ready CSV named:\n"
+            "SEERDataset relies on pyhealth/datasets/configs/seer.yaml, which expects\n"
+            "a preprocessed PyHealth-ready CSV named:\n"
             "  seer_pyhealth.csv\n\n"
             "Required columns in the CSV:\n"
             "  - patient_id\n"
@@ -99,102 +100,11 @@ class SEERDataset(BaseDataset):
             "  - age\n"
             "  - year_dx\n"
             "  - label\n"
-            "  - one-hot feature columns (race_*, grade_*, stage_*, histology_*, etc.)\n\n"
-            "Note: All data wrangling (including patient_id and event_time generation)\n"
+            "  - one-hot feature columns (race_*, grade_*, stage_*, histology_*, etc.)"
+            "\n\n"
+            "Note: All data wrangling (including patient_id and event_time generation)"
+            "\n"
             "must be handled by the preprocessing script prior to initialization.\n"
             "The corresponding seer.yaml configuration must be present in the\n"
             "pyhealth/datasets/configs/ directory."
         )
-
-    # def prepare_metadata(self, root: Path) -> Path:
-    #     """Prepare a PyHealth-compatible CSV and YAML schema.
-
-    #     Args:
-    #         root: Project root directory containing processed data.
-
-    #     Returns:
-    #         Path to the generated YAML config.
-    #     """
-    #     processed_dir = root / "processed"
-    #     processed_dir.mkdir(parents=True, exist_ok=True)
-
-    #     source_csv = processed_dir / "seer_ml_ready.csv"
-    #     output_csv = processed_dir / "seer_pyhealth.csv"
-    #     output_yaml = processed_dir / "seer.yaml"
-
-    #     # Allow synthetic test data to bypass the full preprocessing pipeline.
-    #     if not source_csv.exists():
-    #         alt_csv = processed_dir / "seer_pyhealth.csv"
-    #         if alt_csv.exists():
-    #             source_csv = alt_csv
-
-    #     if not source_csv.exists():
-    #         raise FileNotFoundError(
-    #             f"Could not find {processed_dir / 'seer_ml_ready.csv'} or "
-    #             f"{processed_dir / 'seer_pyhealth.csv'}. "
-    #             "Run preprocessing first, or provide synthetic test data."
-    #         )
-
-    #     df = pd.read_csv(source_csv)
-
-    #     if "patient_id" not in df.columns:
-    #         df.insert(0, "patient_id", [f"seer_{i}" for i in range(len(df))])
-
-    #     if "visit_id" not in df.columns:
-    #         df.insert(1, "visit_id", [f"visit_{i}" for i in range(len(df))])
-
-    #     if "event_time" not in df.columns:
-    #         if "year_dx" not in df.columns:
-    #             raise KeyError(
-    #                 "Missing required column 'year_dx' needed to synthesize "
-    #                 "'event_time'."
-    #             )
-    #         year_series = (
-    #             pd.to_numeric(df["year_dx"], errors="coerce")
-    #             .fillna(2000)
-    #             .astype(int)
-    #         )
-    #         df.insert(2, "event_time", year_series.astype(str) + "-01-01")
-
-    #     df.to_csv(output_csv, index=False)
-
-    #     excluded = {"patient_id", "visit_id", "event_time"}
-    #     attributes = [c for c in df.columns if c not in excluded]
-
-    #     yaml_text = self._build_yaml(
-    #         file_path="processed/seer_pyhealth.csv",
-    #         patient_id="patient_id",
-    #         timestamp="event_time",
-    #         timestamp_format="%Y-%m-%d",
-    #         attributes=attributes,
-    #     )
-    #     output_yaml.write_text(yaml_text, encoding="utf-8")
-
-    #     logger.info("Generated PyHealth SEER table at %s", output_csv)
-    #     logger.info("Generated PyHealth SEER config at %s", output_yaml)
-
-    #     return output_yaml
-
-    # @staticmethod
-    # def _build_yaml(
-    #     file_path: str,
-    #     patient_id: str,
-    #     timestamp: str,
-    #     timestamp_format: str,
-    #     attributes: List[str],
-    # ) -> str:
-    #     """Build a minimal custom-dataset YAML config."""
-    #     attr_lines = "\n".join([f"      - {col}" for col in attributes])
-
-    #     return (
-    #         f'version: "1.0"\n'
-    #         f"tables:\n"
-    #         f"  seer:\n"
-    #         f"    file_path: {file_path}\n"
-    #         f"    patient_id: {patient_id}\n"
-    #         f"    timestamp: {timestamp}\n"
-    #         f'    timestamp_format: "{timestamp_format}"\n'
-    #         f"    attributes:\n"
-    #         f"{attr_lines}\n"
-    #         f"    join: []\n"
-    #     )
