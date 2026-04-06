@@ -1,0 +1,40 @@
+Generated files:
+- processed\seer_clean_human_readable.csv
+- processed\seer_ml_ready.csv
+
+Prediction window (months): 60
+Diagnosis years: 2004-2009
+Histology top-n kept separate: 20
+
+Human-readable columns:
+- age
+- year_dx
+- survival_months
+- event
+- race
+- histology
+- grade
+- stage
+- marital_status
+- laterality
+- er_status
+- pr_status
+- label
+
+ML-ready numeric columns:
+- age
+- year_dx
+
+ML-ready categorical columns one-hot encoded:
+- race
+- histology
+- grade
+- stage
+- marital_status
+- laterality
+- er_status
+- pr_status
+
+Leakage columns removed from ML-ready file:
+- survival_months
+- event

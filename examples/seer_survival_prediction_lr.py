@@ -9,6 +9,10 @@ Ablation study:
 2. Train Logistic Regression after removing 'year_dx' if present
    (otherwise remove the last feature as a fallback).
 
+This ablation tests whether diagnosis year contributes meaningful
+predictive information or if survival prediction is mainly driven
+by clinical features such as stage, grade, and receptor status.
+
 This script demonstrates:
 - dataset loading
 - task processing
