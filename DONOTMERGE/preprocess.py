@@ -227,12 +227,15 @@ def simplify_marital(x):
     return "Unknown"
 
 
-def build_histology_category(series: pd.Series, top_n: int = HISTOLOGY_TOP_N) -> pd.Series:
+def build_histology_category(
+    series: pd.Series, top_n: int = HISTOLOGY_TOP_N
+) -> pd.Series:
     """
-    Convert ICD-O-3 histology codes into categorical strings suitable for one-hot encoding.
+    Convert ICD-O-3 histology codes into categorical strings suitable for 
+    one-hot encoding.
 
-    The most frequent `top_n` codes are kept as individual categories; the rest are grouped
-    into 'Other'. Missing stays as 'Unknown'.
+    The most frequent `top_n` codes are kept as individual categories; the rest 
+    are grouped into 'Other'. Missing stays as 'Unknown'.
     """
     numeric = pd.to_numeric(series, errors="coerce")
     as_str = numeric.astype("Int64").astype(str)
@@ -411,7 +414,10 @@ def main():
     model_df = clean_df.drop(columns=["survival_months", "event"])
 
     model_numeric_cols = ["age", "year_dx"]
-    model_cat_cols = [c for c in model_df.columns if c not in model_numeric_cols + ["label"]]
+    model_cat_cols = [
+        c for c in model_df.columns 
+        if c not in model_numeric_cols + ["label"]
+    ]
 
     ml_df = pd.get_dummies(
         model_df,
