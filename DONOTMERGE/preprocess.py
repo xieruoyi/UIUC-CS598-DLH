@@ -431,30 +431,31 @@ def main():
 
     # FINAL PYHEALTH DATA
     # Originally prepare_metadata() in seer.py
-    pyhealth_df = ml_df.copy()
+    # pyhealth_df = ml_df.copy()
     
     # 1. Inject patient_id and visit_id
-    pyhealth_df.insert(0, "patient_id", [f"seer_{i}" for i in range(len(pyhealth_df))])
-    pyhealth_df.insert(1, "visit_id", [f"visit_{i}" for i in range(len(pyhealth_df))])
+    # pyhealth_df.insert(0, "patient_id", [f"seer_{i}" for i in range(len(pyhealth_df))])
+    # pyhealth_df.insert(1, "visit_id", [f"visit_{i}" for i in range(len(pyhealth_df))])
 
     # 2. Synthesize event_time from year_dx
-    year_series = (
-        pd.to_numeric(pyhealth_df["year_dx"], errors="coerce")
-        .fillna(2000)
-        .astype(int)
-    )
-    pyhealth_df.insert(2, "event_time", year_series.astype(str) + "-01-01")
+    # year_series = (
+    #     pd.to_numeric(pyhealth_df["year_dx"], errors="coerce")
+    #     .fillna(2000)
+    #     .astype(int)
+    # )
+    # pyhealth_df.insert(2, "event_time", year_series.astype(str) + "-01-01")
 
     # 3. Save PyHealth CSV
-    pyhealth_path = os.path.join(OUTPUT_DIR, "seer_pyhealth.csv")
-    pyhealth_df.to_csv(pyhealth_path, index=False)
+    # pyhealth_path = os.path.join(OUTPUT_DIR, "seer_pyhealth.csv")
+    # pyhealth_df.to_csv(pyhealth_path, index=False)
 
     # 4. Generate and save PyHealth YAML config
-    excluded = {"patient_id", "visit_id", "event_time"}
-    attributes = [c for c in pyhealth_df.columns if c not in excluded]
+    # excluded = {"patient_id", "visit_id", "event_time"}
+    # attributes = [c for c in pyhealth_df.columns if c not in excluded]
+    attributes = ml_df.columns.tolist()
 
     yaml_text = build_yaml(
-        file_path=os.path.join(OUTPUT_DIR, "seer_pyhealth.csv"),
+        file_path="processed/seer_pyhealth.csv",
         patient_id="patient_id",
         timestamp="event_time",
         timestamp_format="%Y-%m-%d",
@@ -469,7 +470,7 @@ def main():
         "Generated files:",
         f"- {human_path}",
         f"- {ml_path}",
-        f"- {pyhealth_path}",
+        # f"- {pyhealth_path}",
         f"- {yaml_path}",
         "",
         f"Prediction window (months): {PREDICTION_WINDOW_MONTHS}",
@@ -497,7 +498,7 @@ def main():
     print("ML-ready shape:", ml_df.shape)
     print("Saved:", human_path)
     print("Saved:", ml_path)
-    print("Saved:", pyhealth_path)
+    # print("Saved:", pyhealth_path)
     print("Saved:", yaml_path)
     print("Saved:", schema_path)
 
@@ -512,7 +513,6 @@ def main():
     print("\nLeakage check:")
     print("survival_months in ml_df:", "survival_months" in ml_df.columns)
     print("event in ml_df:", "event" in ml_df.columns)
-
 
 if __name__ == "__main__":
     main()

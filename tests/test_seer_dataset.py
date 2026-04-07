@@ -4,17 +4,21 @@ import pandas as pd
 
 from pyhealth.datasets import SEERDataset
 
+# Define static paths for the config file
+BASE_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_CONFIG_PATH = BASE_DIR / "pyhealth" / "datasets" / "configs" / "seer.yaml"
+
 
 def create_synthetic_seer_data(root: Path) -> None:
-    """Create a tiny synthetic SEER dataset for dataset testing."""
+    """Create a synthetic ML-ready SEER dataset for testing."""
     processed_dir = root / "processed"
     processed_dir.mkdir(parents=True, exist_ok=True)
 
+    # Omit patient_id, visit_id, and event_time to test if 
+    # SEERDataset correctly generates the missing fields
     df = pd.DataFrame(
         [
             {
-                "patient_id": "p1",
-                "event_time": "2005-01-01",
                 "age": 55,
                 "year_dx": 2005,
                 "race_White": 1,
@@ -24,8 +28,6 @@ def create_synthetic_seer_data(root: Path) -> None:
                 "label": 1,
             },
             {
-                "patient_id": "p2",
-                "event_time": "2006-01-01",
                 "age": 63,
                 "year_dx": 2006,
                 "race_White": 0,
@@ -35,8 +37,6 @@ def create_synthetic_seer_data(root: Path) -> None:
                 "label": 0,
             },
             {
-                "patient_id": "p3",
-                "event_time": "2007-01-01",
                 "age": 47,
                 "year_dx": 2007,
                 "race_White": 1,
@@ -59,24 +59,30 @@ def test_seer_dataset_loads(tmp_path: Path) -> None:
     dataset = SEERDataset(
         root=str(tmp_path),
         tables=["seer"],
+        config_path=str(DEFAULT_CONFIG_PATH),
+        dev=True,
+        cache_dir=str(tmp_path)
     )
 
     assert dataset is not None
     assert Path(dataset.root) == tmp_path
+    assert "seer" in dataset.tables
 
 
-def test_seer_dataset_generates_metadata_files(tmp_path: Path) -> None:
-    """Test that dataset preparation generates CSV and YAML metadata files."""
+def test_seer_dataset_generates_pyhealth_csv(tmp_path: Path) -> None:
+    """Test that dataset preparation generates the PyHealth-compatible CSV."""
     create_synthetic_seer_data(tmp_path)
 
     SEERDataset(
         root=str(tmp_path),
         tables=["seer"],
+        config_path=str(DEFAULT_CONFIG_PATH),
+        dev=True,
+        cache_dir=str(tmp_path)
     )
 
     processed_dir = tmp_path / "processed"
     assert (processed_dir / "seer_pyhealth.csv").exists()
-    assert (processed_dir / "seer.yaml").exists()
 
 
 def test_seer_dataset_generated_csv_integrity(tmp_path: Path) -> None:
@@ -86,34 +92,33 @@ def test_seer_dataset_generated_csv_integrity(tmp_path: Path) -> None:
     SEERDataset(
         root=str(tmp_path),
         tables=["seer"],
+        config_path=str(DEFAULT_CONFIG_PATH),
+        dev=True,
+        cache_dir=str(tmp_path)
     )
 
     generated_csv = tmp_path / "processed" / "seer_pyhealth.csv"
     df = pd.read_csv(generated_csv)
 
+    assert "patient_id" in df.columns
+    assert "visit_id" in df.columns
+    assert "event_time" in df.columns
+    assert list(df["patient_id"]) == ["seer_0", "seer_1", "seer_2"]
+
     assert len(df) == 3
-    assert set(df["patient_id"]) == {"p1", "p2", "p3"}
     assert "age" in df.columns
     assert "year_dx" in df.columns
     assert "label" in df.columns
 
-    row_p2 = df[df["patient_id"] == "p2"].iloc[0]
+    row_p2 = df[df["patient_id"] == "seer_1"].iloc[0]
     assert row_p2["race_Black"] == 1
     assert row_p2["stage_Regional"] == 1
     assert row_p2["label"] == 0
 
 
-def test_seer_dataset_generated_yaml_integrity(tmp_path: Path) -> None:
-    """Test that the generated YAML contains expected schema fields."""
-    create_synthetic_seer_data(tmp_path)
-
-    SEERDataset(
-        root=str(tmp_path),
-        tables=["seer"],
-    )
-
-    yaml_path = tmp_path / "processed" / "seer.yaml"
-    yaml_text = yaml_path.read_text(encoding="utf-8")
+def test_static_yaml_integrity() -> None:
+    """Test that the static YAML in the repository contains expected fields."""
+    yaml_text = DEFAULT_CONFIG_PATH.read_text(encoding="utf-8")
 
     assert 'version: "1.0"' in yaml_text
     assert "tables:" in yaml_text
