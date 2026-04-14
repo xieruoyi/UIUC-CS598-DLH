@@ -40,6 +40,7 @@ Available Datasets
     datasets/pyhealth.datasets.OMOPDataset
     datasets/pyhealth.datasets.DREAMTDataset
     datasets/pyhealth.datasets.SHHSDataset
+    datasets/pyhealth.datasets.SEERDataset
     datasets/pyhealth.datasets.SleepEDFDataset
     datasets/pyhealth.datasets.EHRShotDataset
     datasets/pyhealth.datasets.Support2Dataset
