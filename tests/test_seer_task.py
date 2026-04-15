@@ -46,22 +46,22 @@ def create_synthetic_seer_data(
     df.to_csv(csv_path, index=False)
 
     yaml_text = """
-        version: "1.0"
-        tables:
-        seer:
-            file_path: processed/seer_pyhealth.csv
-            patient_id: patient_id
-            timestamp: event_time
-            timestamp_format: "%Y-%m-%d"
-            attributes:
-            - age
-            - year_dx
-            - label
-            - race_White
-            - race_Black
-            - stage_Localized
-            - stage_Regional
-    """.strip()
+version: "1.0"
+tables:
+  seer:
+    file_path: processed/seer_pyhealth.csv
+    patient_id: patient_id
+    timestamp: event_time
+    timestamp_format: "%Y-%m-%d"
+    attributes:
+      - age
+      - year_dx
+      - label
+      - race_White
+      - race_Black
+      - stage_Localized
+      - stage_Regional
+""".strip()
 
     yaml_path = processed_dir / "seer.yaml"
     yaml_path.write_text(yaml_text, encoding="utf-8")
