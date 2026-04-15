@@ -14,8 +14,8 @@ def create_synthetic_seer_data(root: Path) -> None:
     processed_dir = root / "processed"
     processed_dir.mkdir(parents=True, exist_ok=True)
 
-    # Omit patient_id, visit_id, and event_time to test if 
-    # SEERDataset correctly generates the missing fields
+    # Omit patient_id, visit_id, and event_time to test if SEERDataset 
+    # generates the missing fields
     df = pd.DataFrame(
         [
             {
