@@ -1,143 +1,67 @@
-from pathlib import Path
+from unittest.mock import MagicMock
 
-import pandas as pd
+import numpy as np
 import pytest
 
-from pyhealth.datasets import SEERDataset
 from pyhealth.tasks.seer_survival_prediction import SEERSurvivalPrediction
 
 
-def create_synthetic_seer_data(
-    root: Path,
-    rows: list[dict] | None = None,
-) -> None:
-    """Create a tiny synthetic SEER dataset for task testing."""
-    processed_dir = root / "processed"
-    processed_dir.mkdir(parents=True, exist_ok=True)
-
-    if rows is None:
-        rows = [
-            {
-                "patient_id": "p1",
-                "event_time": "2005-01-01",
-                "age": 55,
-                "year_dx": 2005,
-                "race_White": 1,
-                "race_Black": 0,
-                "stage_Localized": 1,
-                "stage_Regional": 0,
-                "label": 1,
-            },
-            {
-                "patient_id": "p2",
-                "event_time": "2006-01-01",
-                "age": 63,
-                "year_dx": 2006,
-                "race_White": 0,
-                "race_Black": 1,
-                "stage_Localized": 0,
-                "stage_Regional": 1,
-                "label": 0,
-            },
-        ]
-
-    df = pd.DataFrame(rows)
-    csv_path = processed_dir / "seer_pyhealth.csv"
-    df.to_csv(csv_path, index=False)
-
-    yaml_text = """
-version: "1.0"
-tables:
-  seer:
-    file_path: processed/seer_pyhealth.csv
-    patient_id: patient_id
-    timestamp: event_time
-    timestamp_format: "%Y-%m-%d"
-    attributes:
-      - age
-      - year_dx
-      - label
-      - race_White
-      - race_Black
-      - stage_Localized
-      - stage_Regional
-""".strip()
-
-    yaml_path = processed_dir / "seer.yaml"
-    yaml_path.write_text(yaml_text, encoding="utf-8")
+@pytest.fixture
+def task():
+    """Returns a fresh instance of the task for each test."""
+    return SEERSurvivalPrediction()
 
 
-def test_seer_task_generates_samples(tmp_path: Path) -> None:
+@pytest.fixture
+def valid_patient():
+    """Instantly conjures a fake PyHealth patient in memory."""
+    mock_event = MagicMock()
+    mock_event.attr_dict = {
+        "label": 1,
+        "age": 55,
+        "year_dx": 2005,
+        "race_White": 1,
+        "stage_Localized": 1,
+    }
+
+    mock_patient = MagicMock()
+    mock_patient.patient_id = "p1"
+    mock_patient.get_events.return_value = [mock_event]
+    return mock_patient
+
+
+def test_seer_task_generates_samples(task, valid_patient) -> None:
     """Test that the SEER task generates valid samples."""
-    create_synthetic_seer_data(tmp_path)
+    samples = task(valid_patient)
 
-    dataset = SEERDataset(
-        root=str(tmp_path),
-        tables=["seer"],
-        config_path=str(tmp_path / "processed" / "seer.yaml")
-    )
-    task = SEERSurvivalPrediction()
-
-    samples = dataset.set_task(task)
-
-    assert len(samples) == 2
+    assert len(samples) == 1
 
     sample = samples[0]
-    assert "patient_id" in sample
-    assert "visit_id" in sample
+    assert sample["patient_id"] == "p1"
+    assert sample["visit_id"] == "p1_seer"
     assert "features" in sample
     assert "label" in sample
 
 
-def test_seer_task_feature_extraction(tmp_path: Path) -> None:
+def test_seer_task_feature_extraction(task, valid_patient) -> None:
     """Test that task extracts features with the correct dimension."""
-    create_synthetic_seer_data(tmp_path)
+    samples = task(valid_patient)
+    features = samples[0]["features"]
 
-    dataset = SEERDataset(
-        root=str(tmp_path),
-        tables=["seer"],
-        config_path=str(tmp_path / "processed" / "seer.yaml")
-    )
-    task = SEERSurvivalPrediction()
-
-    samples = dataset.set_task(task)
-
-    sample = samples[0]
-    features = sample["features"]
-
-    # label excluded, so remaining feature columns = 6
-    assert features.shape[0] == 6
+    # label is excluded, leaving exactly 4 feature columns
+    assert features.shape[0] == 4
+    assert isinstance(features, np.ndarray)
 
 
-def test_seer_task_label_generation(tmp_path: Path) -> None:
+def test_seer_task_label_generation(task, valid_patient) -> None:
     """Test that labels are preserved as binary outputs."""
-    create_synthetic_seer_data(tmp_path)
-
-    dataset = SEERDataset(
-        root=str(tmp_path),
-        tables=["seer"],
-        config_path=str(tmp_path / "processed" / "seer.yaml")
-    )
-    task = SEERSurvivalPrediction()
-
-    samples = dataset.set_task(task)
-
-    labels = {int(samples[i]["label"].item()) for i in range(len(samples))}
-    assert labels == {0, 1}
+    samples = task(valid_patient)
+    assert samples[0]["label"] == 1
 
 
-def test_seer_task_feature_names_saved(tmp_path: Path) -> None:
+def test_seer_task_feature_names_saved(task, valid_patient) -> None:
     """Test that feature names are saved consistently."""
-    create_synthetic_seer_data(tmp_path)
-
-    dataset = SEERDataset(
-        root=str(tmp_path),
-        tables=["seer"],
-        config_path=str(tmp_path / "processed" / "seer.yaml")
-    )
-    task = SEERSurvivalPrediction()
-
-    dataset.set_task(task)
+    task(valid_patient)
 
     assert task.feature_names is not None
     assert "age" in task.feature_names
@@ -145,57 +69,19 @@ def test_seer_task_feature_names_saved(tmp_path: Path) -> None:
     assert "label" not in task.feature_names
 
 
-def test_seer_task_invalid_label_raises(tmp_path: Path) -> None:
+def test_seer_task_invalid_label_raises(task, valid_patient) -> None:
     """Test that a non-binary label raises a ValueError."""
-    rows = [
-        {
-            "patient_id": "p1",
-            "event_time": "2005-01-01",
-            "age": 55,
-            "year_dx": 2005,
-            "race_White": 1,
-            "race_Black": 0,
-            "stage_Localized": 1,
-            "stage_Regional": 0,
-            "label": 2,
-        }
-    ]
-    create_synthetic_seer_data(tmp_path, rows=rows)
-
-    dataset = SEERDataset(
-        root=str(tmp_path),
-        tables=["seer"],
-        config_path=str(tmp_path / "processed" / "seer.yaml")
-    )
-    task = SEERSurvivalPrediction()
+    # Corrupt the label in memory
+    valid_patient.get_events.return_value[0].attr_dict["label"] = 2
 
     with pytest.raises(ValueError, match="Label must be binary 0/1"):
-        dataset.set_task(task)
+        task(valid_patient)
 
 
-def test_seer_task_non_numeric_feature_raises(tmp_path: Path) -> None:
+def test_seer_task_non_numeric_feature_raises(task, valid_patient) -> None:
     """Test that a non-numeric feature raises a ValueError."""
-    rows = [
-        {
-            "patient_id": "p1",
-            "event_time": "2005-01-01",
-            "age": "bad_value",
-            "year_dx": 2005,
-            "race_White": 1,
-            "race_Black": 0,
-            "stage_Localized": 1,
-            "stage_Regional": 0,
-            "label": 1,
-        }
-    ]
-    create_synthetic_seer_data(tmp_path, rows=rows)
-
-    dataset = SEERDataset(
-        root=str(tmp_path),
-        tables=["seer"],
-        config_path=str(tmp_path / "processed" / "seer.yaml")
-    )
-    task = SEERSurvivalPrediction()
+    # Corrupt a feature in memory
+    valid_patient.get_events.return_value[0].attr_dict["age"] = "bad_data"
 
     with pytest.raises(ValueError, match="Feature column"):
-        dataset.set_task(task)
+        task(valid_patient)

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from pyhealth.datasets import SEERDataset
 
@@ -14,8 +15,6 @@ def create_synthetic_seer_data(root: Path) -> None:
     processed_dir = root / "processed"
     processed_dir.mkdir(parents=True, exist_ok=True)
 
-    # Omit patient_id, visit_id, and event_time to test if SEERDataset 
-    # generates the missing fields
     df = pd.DataFrame(
         [
             {
@@ -52,52 +51,49 @@ def create_synthetic_seer_data(root: Path) -> None:
     df.to_csv(csv_path, index=False)
 
 
-def test_seer_dataset_loads(tmp_path: Path) -> None:
-    """Test that the synthetic SEER dataset initializes successfully."""
-    create_synthetic_seer_data(tmp_path)
-
+@pytest.fixture(scope="module")
+def shared_seer_setup(tmp_path_factory):
+    """Creates the data and initializes the dataset once for the whole module."""
+    # Create a module-level temporary directory
+    temp_dir = tmp_path_factory.mktemp("seer_test_dir")
+    
+    # Generate the synthetic data
+    create_synthetic_seer_data(temp_dir)
+    
+    # Initialize PyHealth dataset
     dataset = SEERDataset(
-        root=str(tmp_path),
+        root=str(temp_dir),
         tables=["seer"],
         config_path=str(DEFAULT_CONFIG_PATH),
         dev=True,
-        cache_dir=str(tmp_path)
+        cache_dir=str(temp_dir)
     )
+    
+    return dataset, temp_dir
+
+
+def test_seer_dataset_loads(shared_seer_setup) -> None:
+    """Test that the synthetic SEER dataset initializes successfully."""
+    dataset, temp_dir = shared_seer_setup
 
     assert dataset is not None
-    assert Path(dataset.root) == tmp_path
+    assert Path(dataset.root) == temp_dir
     assert "seer" in dataset.tables
 
 
-def test_seer_dataset_generates_pyhealth_csv(tmp_path: Path) -> None:
+def test_seer_dataset_generates_pyhealth_csv(shared_seer_setup) -> None:
     """Test that dataset preparation generates the PyHealth-compatible CSV."""
-    create_synthetic_seer_data(tmp_path)
+    _, temp_dir = shared_seer_setup
 
-    SEERDataset(
-        root=str(tmp_path),
-        tables=["seer"],
-        config_path=str(DEFAULT_CONFIG_PATH),
-        dev=True,
-        cache_dir=str(tmp_path)
-    )
-
-    processed_dir = tmp_path / "processed"
+    processed_dir = temp_dir / "processed"
     assert (processed_dir / "seer_pyhealth.csv").exists()
 
 
-def test_seer_dataset_generated_csv_integrity(tmp_path: Path) -> None:
+def test_seer_dataset_generated_csv_integrity(shared_seer_setup) -> None:
     """Test that the generated CSV preserves expected data columns and values."""
-    create_synthetic_seer_data(tmp_path)
+    _, temp_dir = shared_seer_setup
 
-    SEERDataset(
-        root=str(tmp_path),
-        tables=["seer"],
-        config_path=str(DEFAULT_CONFIG_PATH),
-        dev=True,
-        cache_dir=str(tmp_path)
-    )
-
-    generated_csv = tmp_path / "processed" / "seer_pyhealth.csv"
+    generated_csv = temp_dir / "processed" / "seer_pyhealth.csv"
     df = pd.read_csv(generated_csv)
 
     assert "patient_id" in df.columns
