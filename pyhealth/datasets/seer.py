@@ -51,7 +51,8 @@ class SEERDataset(BaseDataset):
 
     Args:
         root (str): The root directory where the preprocessed dataset CSV is stored.
-        tables (Optional[List[str]]): A list of tables to be included. Defaults to ["seer"].
+        tables (Optional[List[str]]): A list of tables to be included. 
+            Defaults to ["seer"].
         dataset_name (Optional[str]): The name of the dataset. Defaults to "seer".
         config_path (Optional[str]): The path to the configuration file. Defaults to 
             `configs/seer.yaml`.
@@ -132,7 +133,11 @@ class SEERDataset(BaseDataset):
 
         if "event_time" not in df.columns:
             if "year_dx" in df.columns:
-                year_series = pd.to_numeric(df["year_dx"], errors="coerce").fillna(2000).astype(int)
+                year_series = (
+                    pd.to_numeric(df["year_dx"], errors="coerce")
+                    .fillna(2000)
+                    .astype(int)
+                )
                 df.insert(2, "event_time", year_series.astype(str) + "-01-01")
             else:
                 df.insert(2, "event_time", "2000-01-01")
@@ -153,7 +158,8 @@ class SEERDataset(BaseDataset):
             "  - age\n"
             "  - year_dx\n"
             "  - label\n"
-            "  - one-hot feature columns (race_*, grade_*, stage_*, histology_*, etc.)\n\n"
+            "  - one-hot feature columns (race_*, grade_*, stage_*, histology_*, etc.)"
+            "\n\n"
             "The dataset wrapper will auto-create if missing:\n"
             "  - patient_id\n"
             "  - visit_id\n"
