@@ -1,9 +1,15 @@
+"""
+Contributor: Adrianne Sun, Ruoyi Xie
+NetID: ajsun2, ruoyix2
+Paper Title: Reproducible Survival Prediction with SEER Cancer Data
+Paper Link: https://proceedings.mlr.press/v85/hegselmann18a/hegselmann18a.pdf
+Description: Test suite for the SEER Survival Prediction task.
+"""
 import unittest
 from unittest.mock import MagicMock
 import numpy as np
 
 from pyhealth.tasks.seer_survival_prediction import SEERSurvivalPrediction
-
 
 class TestSEERSurvivalPrediction(unittest.TestCase):
     

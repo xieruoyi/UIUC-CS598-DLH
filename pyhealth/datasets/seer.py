@@ -1,3 +1,10 @@
+"""
+Contributor: Adrianne Sun, Ruoyi Xie
+NetID: ajsun2, ruoyix2
+Paper Title: Reproducible Survival Prediction with SEER Cancer Data
+Paper Link: https://proceedings.mlr.press/v85/hegselmann18a/hegselmann18a.pdf
+Description: Implementation of the SEER dataset.
+"""
 from __future__ import annotations
 
 import logging
@@ -108,8 +115,13 @@ class SEERDataset(BaseDataset):
     def prepare_metadata(self, root: Path) -> None:
         """Prepare a PyHealth-compatible CSV from the ML-ready output.
         
+        Will be called in `self.__init__()` during dataset initialization.
+        
         Args:
-            root: Project root directory containing the processed data.
+            root (Path): Project root directory containing the processed data.
+            
+        Returns:
+            None: This function writes the modified CSV to disk and returns nothing.
         """
         processed_dir = root / "processed"
         processed_dir.mkdir(parents=True, exist_ok=True)
@@ -147,7 +159,16 @@ class SEERDataset(BaseDataset):
 
     @staticmethod
     def info() -> None:
-        """Prints the expected input format for the SEER dataset."""
+        """Prints the expected input format for the SEER dataset.
+        
+        Can be called independently by the user to check dataset requirements.
+        
+        Args:
+            None
+            
+        Returns:
+            None: Prints the format requirements to standard output.
+        """
         print(
             "SEERDataset relies on pyhealth/datasets/configs/seer.yaml, which expects\n"
             "a preprocessed PyHealth-ready CSV named:\n"

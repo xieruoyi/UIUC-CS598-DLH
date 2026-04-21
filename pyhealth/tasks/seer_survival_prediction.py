@@ -1,3 +1,10 @@
+"""
+Contributor: Adrianne Sun, Ruoyi Xie
+NetID: ajsun2, ruoyix2
+Paper Title: Reproducible Survival Prediction with SEER Cancer Data
+Paper Link: https://proceedings.mlr.press/v85/hegselmann18a/hegselmann18a.pdf
+Description: Implementation of the SEER Survival Prediction task.
+"""
 from typing import Dict, List
 import numpy as np
 
@@ -32,15 +39,17 @@ class SEERSurvivalPrediction(BaseTask):
     def __call__(self, patient) -> List[Dict]:
         """Processes a single patient for the SEER survival prediction task.
 
+        Will be called automatically by `dataset.set_task()` to generate samples.
+
         Args:
-            patient: A patient object containing SEER data.
+            patient (Patient): A PyHealth Patient object containing SEER data.
 
         Returns:
-            samples: a list of samples, each sample is a dict with patient_id, visit_id,
-                features, and label.
-
+            List[Dict]: A list of samples, where each sample is a dict containing 
+                'patient_id', 'visit_id', 'features', and 'label'.
+        
         Note that we define the task as a binary classification task.
-
+        
         Examples:
             >>> from pyhealth.datasets import SEERDataset
             >>> seer_ds = SEERDataset(

@@ -1,4 +1,9 @@
 """
+Contributor: Adrianne Sun, Ruoyi Xie
+NetID: ajsun2, ruoyix2
+Paper Title: Reproducible Survival Prediction with SEER Cancer Data
+Paper Link: https://proceedings.mlr.press/v85/hegselmann18a/hegselmann18a.pdf
+
 Ablation: Evaluating Time-based Feature Significance in SEER Survival Prediction
 
 Purpose:
