@@ -1,7 +1,6 @@
-
 import os
 import re
-from typing import Iterable
+from typing import Iterable, List
 
 import numpy as np
 import pandas as pd
@@ -228,12 +227,15 @@ def simplify_marital(x):
     return "Unknown"
 
 
-def build_histology_category(series: pd.Series, top_n: int = HISTOLOGY_TOP_N) -> pd.Series:
+def build_histology_category(
+    series: pd.Series, top_n: int = HISTOLOGY_TOP_N
+) -> pd.Series:
     """
-    Convert ICD-O-3 histology codes into categorical strings suitable for one-hot encoding.
+    Convert ICD-O-3 histology codes into categorical strings suitable for 
+    one-hot encoding.
 
-    The most frequent `top_n` codes are kept as individual categories; the rest are grouped
-    into 'Other'. Missing stays as 'Unknown'.
+    The most frequent `top_n` codes are kept as individual categories; the rest 
+    are grouped into 'Other'. Missing stays as 'Unknown'.
     """
     numeric = pd.to_numeric(series, errors="coerce")
     as_str = numeric.astype("Int64").astype(str)
@@ -256,6 +258,30 @@ def ensure_required_columns(df: pd.DataFrame, cols: Iterable[str]) -> None:
     missing = [c for c in cols if c not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
+
+# Moved yaml script into preprocess, shouldn't be generated in pyhealth release
+def build_yaml(
+    file_path: str,
+    patient_id: str,
+    timestamp: str,
+    timestamp_format: str,
+    attributes: List[str],
+) -> str:
+    """Build a minimal custom-dataset YAML config."""
+    attr_lines = "\n".join([f"      - {col}" for col in attributes])
+
+    return (
+        f'version: "1.0"\n'
+        f"tables:\n"
+        f"  seer:\n"
+        f"    file_path: {file_path}\n"
+        f"    patient_id: {patient_id}\n"
+        f"    timestamp: {timestamp}\n"
+        f'    timestamp_format: "{timestamp_format}"\n'
+        f"    attributes:\n"
+        f"{attr_lines}\n"
+        f"    join: []\n"
+    )
 
 
 def main():
@@ -354,7 +380,7 @@ def main():
             "stage": df["stage_simple"],
             "marital_status": df["marital_simple"],
             "laterality": df["laterality_simple"],
-            "er_status": df["er_simple"],
+            "er_status": df["er_simple"], 
             "pr_status": df["pr_simple"],
             "label": df["label"],
         }
@@ -388,7 +414,10 @@ def main():
     model_df = clean_df.drop(columns=["survival_months", "event"])
 
     model_numeric_cols = ["age", "year_dx"]
-    model_cat_cols = [c for c in model_df.columns if c not in model_numeric_cols + ["label"]]
+    model_cat_cols = [
+        c for c in model_df.columns 
+        if c not in model_numeric_cols + ["label"]
+    ]
 
     ml_df = pd.get_dummies(
         model_df,
@@ -400,11 +429,49 @@ def main():
     ml_path = os.path.join(OUTPUT_DIR, "seer_ml_ready.csv")
     ml_df.to_csv(ml_path, index=False)
 
+    # FINAL PYHEALTH DATA
+    # Originally prepare_metadata() in seer.py
+    # pyhealth_df = ml_df.copy()
+    
+    # 1. Inject patient_id and visit_id
+    # pyhealth_df.insert(0, "patient_id", [f"seer_{i}" for i in range(len(pyhealth_df))])
+    # pyhealth_df.insert(1, "visit_id", [f"visit_{i}" for i in range(len(pyhealth_df))])
+
+    # 2. Synthesize event_time from year_dx
+    # year_series = (
+    #     pd.to_numeric(pyhealth_df["year_dx"], errors="coerce")
+    #     .fillna(2000)
+    #     .astype(int)
+    # )
+    # pyhealth_df.insert(2, "event_time", year_series.astype(str) + "-01-01")
+
+    # 3. Save PyHealth CSV
+    # pyhealth_path = os.path.join(OUTPUT_DIR, "seer_pyhealth.csv")
+    # pyhealth_df.to_csv(pyhealth_path, index=False)
+
+    # 4. Generate and save PyHealth YAML config
+    # excluded = {"patient_id", "visit_id", "event_time"}
+    # attributes = [c for c in pyhealth_df.columns if c not in excluded]
+    attributes = ml_df.columns.tolist()
+
+    yaml_text = build_yaml(
+        file_path="processed/seer_pyhealth.csv",
+        patient_id="patient_id",
+        timestamp="event_time",
+        timestamp_format="%Y-%m-%d",
+        attributes=attributes,
+    )
+    yaml_path = os.path.join(OUTPUT_DIR, "seer.yaml")
+    with open(yaml_path, "w", encoding="utf-8") as f:
+        f.write(yaml_text)
+        
     # Summary file
     schema_lines = [
         "Generated files:",
         f"- {human_path}",
         f"- {ml_path}",
+        # f"- {pyhealth_path}",
+        f"- {yaml_path}",
         "",
         f"Prediction window (months): {PREDICTION_WINDOW_MONTHS}",
         f"Diagnosis years: {DIAGNOSIS_YEAR_MIN}-{DIAGNOSIS_YEAR_MAX}",
@@ -431,6 +498,8 @@ def main():
     print("ML-ready shape:", ml_df.shape)
     print("Saved:", human_path)
     print("Saved:", ml_path)
+    # print("Saved:", pyhealth_path)
+    print("Saved:", yaml_path)
     print("Saved:", schema_path)
 
     print("\nLabel distribution:")
@@ -444,7 +513,6 @@ def main():
     print("\nLeakage check:")
     print("survival_months in ml_df:", "survival_months" in ml_df.columns)
     print("event in ml_df:", "event" in ml_df.columns)
-
 
 if __name__ == "__main__":
     main()

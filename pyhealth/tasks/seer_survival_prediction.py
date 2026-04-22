@@ -1,3 +1,10 @@
+"""
+Contributor: Adrianne Sun, Ruoyi Xie
+NetID: ajsun2, ruoyix2
+Paper Title: Reproducible Survival Prediction with SEER Cancer Data
+Paper Link: https://proceedings.mlr.press/v85/hegselmann18a/hegselmann18a.pdf
+Description: Implementation of the SEER Survival Prediction task.
+"""
 from typing import Dict, List
 import numpy as np
 
@@ -5,13 +12,20 @@ from pyhealth.tasks import BaseTask
 
 
 class SEERSurvivalPrediction(BaseTask):
-    """SEER survival prediction task.
+    """Binary classification task for survival prediction on SEER dataset.
 
-    Binary classification:
-        label = 1 -> survived >= threshold
-        label = 0 -> cancer death within threshold
+    Survival prediction aims at classifying whether a patient will survive past a
+    defined time threshold (e.g., 60 months) based on pre-extracted clinical features. 
+    The task is defined as a binary classification.
 
-    Assumes the source CSV has already produced a clean binary label column.
+    Attributes:
+        task_name (str): The name of the task, set to "SEERSurvivalPrediction".
+        input_schema (Dict[str, str]): The input schema specifying the required
+            input format. Contains:
+            - "label": "binary"
+        output_schema (Dict[str, str]): The output schema specifying the output
+            format. Contains:
+            - "label": "binary"
     """
 
     task_name: str = "SEERSurvivalPrediction"
@@ -23,6 +37,35 @@ class SEERSurvivalPrediction(BaseTask):
         self.feature_names: List[str] | None = None
 
     def __call__(self, patient) -> List[Dict]:
+        """Processes a single patient for the SEER survival prediction task.
+
+        Will be called automatically by `dataset.set_task()` to generate samples.
+
+        Args:
+            patient (Patient): A PyHealth Patient object containing SEER data.
+
+        Returns:
+            List[Dict]: A list of samples, where each sample is a dict containing 
+                'patient_id', 'visit_id', 'features', and 'label'.
+        
+        Note that we define the task as a binary classification task.
+        
+        Examples:
+            >>> from pyhealth.datasets import SEERDataset
+            >>> seer_ds = SEERDataset(
+            ...     root="/path/to/processed",
+            ...     tables=["seer"]
+            ... )
+            >>> from pyhealth.tasks import SEERSurvivalPrediction
+            >>> survival_ds = seer_ds.set_task(SEERSurvivalPrediction())
+            >>> survival_ds.samples[0]
+            {
+                'patient_id': 'seer_0',
+                'visit_id': 'seer_0_seer',
+                'features': array([55., 2005., 1., 0., ...], dtype=float32),
+                'label': 1
+            }
+        """
         samples = []
 
         # Access events through patient.get_events(...)
